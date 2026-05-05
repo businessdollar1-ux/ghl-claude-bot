@@ -16,7 +16,7 @@ app.post("/reply", async (req, res) => {
         "content-type": "application/json"
       },
       body: JSON.stringify({
-        model: "claude-3-5-sonnet-latest"
+        model: "claude-sonnet-4-5"
         max_tokens: 200,
         temperature: 0.7,
         system: "You are a concise Instagram DM assistant. Reply in 1 short sentence.",
