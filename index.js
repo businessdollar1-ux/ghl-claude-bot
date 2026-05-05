@@ -316,6 +316,20 @@ Do not ask generic questions like:
 
 The goal early is to identify who they are, where they are from, whether they are worth moving toward a call, and to build some relationship to make them at ease and put their resistance down.
 
+CONVERSATION STATE CONTROL
+
+If the lead has already given their name, location, job, goal, or any personal detail:
+do not introduce yourself again.
+do not repeat the opener.
+do not ask for the same information again.
+
+Instead:
+acknowledge what they said.
+relate back briefly.
+move the conversation forward.
+
+Repeating the opener is a critical error and must never happen.
+
 LOCATION ROUTING RULE
 
 If they are from a strong buying country and show real intent, move faster toward proof and call.
@@ -490,25 +504,45 @@ app.get("/", (req, res) => {
   res.json({ status: "ok" });
 });
 
+function trimHistory(historyText, maxLines = 12) {
+  if (!historyText || typeof historyText !== "string") return "";
+
+  return historyText
+    .split("\n")
+    .map(line => line.trim())
+    .filter(Boolean)
+    .slice(-maxLines)
+    .join("\n");
+}
+
+function buildClaudeUserInput(historyText, userMessage) {
+  const cleanedHistory = trimHistory(historyText);
+
+  if (!cleanedHistory) {
+    return `Current user message:\n${userMessage}`;
+  }
+
+  return `Conversation history:\n${cleanedHistory}\n\nCurrent user message:\n${userMessage}`;
+}
+
+function buildUpdatedHistory(historyText, userMessage, assistantReply) {
+  const oldHistory = trimHistory(historyText);
+
+  const newLines = [
+    oldHistory,
+    `user: ${userMessage}`,
+    `assistant: ${assistantReply}`
+  ].filter(Boolean);
+
+  return trimHistory(newLines.join("\n"), 12);
+}
+
 app.post("/reply", async (req, res) => {
   try {
     const userMessage = req.body.message || "hello";
+    const historyText = req.body.history_text || "";
 
-    let history = req.body.history || [];
-
-    if (history.length > 6) {
-      history = history.slice(-6);
-    }
-
-    const formattedHistory = history.map((msg) => ({
-      role: msg.role === "assistant" ? "assistant" : "user",
-      content: [
-        {
-          type: "text",
-          text: msg.text || msg.content || ""
-        }
-      ]
-    }));
+    const userInput = buildClaudeUserInput(historyText, userMessage);
 
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -523,13 +557,12 @@ app.post("/reply", async (req, res) => {
         temperature: 0.4,
         system: MASTER_PROMPT,
         messages: [
-          ...formattedHistory,
           {
             role: "user",
             content: [
               {
                 type: "text",
-                text: userMessage
+                text: userInput
               }
             ]
           }
@@ -549,7 +582,7 @@ app.post("/reply", async (req, res) => {
     reply = reply
       .replace(/[—–-]/g, "")
       .replace(/;/g, "")
-      .replace(/\n/g, " ")
+      .replace(/\n{3,}/g, "\n\n")
       .trim();
 
     const sentences = reply.split(/(?<=[.!?])\s+/);
@@ -557,7 +590,12 @@ app.post("/reply", async (req, res) => {
       reply = sentences.slice(0, 2).join(" ");
     }
 
-    res.json({ reply });
+    const updatedHistory = buildUpdatedHistory(historyText, userMessage, reply);
+
+    res.json({
+      reply,
+      updated_history: updatedHistory
+    });
 
   } catch (error) {
     console.error("Server error:", error);
