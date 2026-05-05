@@ -5,47 +5,48 @@ const app = express();
 app.use(express.json());
 
 app.post("/reply", async (req, res) => {
-  const userMessage = req.body.message || "hey";
+  const userMessage = req.body.message || "hello";
 
   try {
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-  method: "POST",
-  headers: {
-    "x-api-key": process.env.CLAUDE_KEY,
-    "anthropic-version": "2023-06-01",
-    "content-type": "application/json"
-  },
-body: JSON.stringify({
-  model: "claude-3-sonnet-20240229",
-  max_tokens: 200,
-  messages: [
-    {
-      role: "user",
-      content: [
-        {
-          type: "text",
-          text: userMessage
-        }
-      ]
-    }
-  ]
-})
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "x-api-key": process.env.CLAUDE_KEY,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "claude-3-sonnet-20240229",
+        max_tokens: 200,
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: userMessage
+              }
+            ]
+          }
+        ]
+      })
+    });
 
     const data = await response.json();
 
     if (!response.ok) {
-      console.error("Claude API error:", data);
-      return res.status(response.status).json(data);
+      console.error("Claude error:", data);
+      return res.status(500).json(data);
     }
 
-    const reply = data.content?.[0]?.text || "No reply generated";
+    const reply = data.content?.[0]?.text || "No reply";
 
     res.json({ reply });
 
   } catch (error) {
     console.error("Server error:", error);
     res.status(500).json({
-      error: "Server error",
+      error: "server crashed",
       details: error.message
     });
   }
