@@ -15,17 +15,21 @@ app.post("/reply", async (req, res) => {
     "anthropic-version": "2023-06-01",
     "content-type": "application/json"
   },
-  body: JSON.stringify({
-    model: "claude-3-sonnet-20240229",
-    max_tokens: 200,
-    messages: [
-      {
-        role: "user",
-        content: userMessage
-      }
-    ]
-  })
-});
+body: JSON.stringify({
+  model: "claude-3-sonnet-20240229",
+  max_tokens: 200,
+  messages: [
+    {
+      role: "user",
+      content: [
+        {
+          type: "text",
+          text: userMessage
+        }
+      ]
+    }
+  ]
+})
 
     const data = await response.json();
 
