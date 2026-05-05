@@ -5,7 +5,7 @@ const app = express();
 app.use(express.json());
 
 app.post("/reply", async (req, res) => {
-  const userMessage = req.body.message;
+  const userMessage = req.body.message || "hey";
 
   try {
     const response = await fetch("https://api.anthropic.com/v1/messages", {
@@ -19,7 +19,7 @@ app.post("/reply", async (req, res) => {
         model: "claude-3-5-sonnet-20241022",
         max_tokens: 200,
         temperature: 0.7,
-        system: "PASTE YOUR FULL PROMPT HERE",
+        system: "You are a concise Instagram DM assistant. Reply in 1 short sentence.",
         messages: [
           {
             role: "user",
@@ -30,17 +30,27 @@ app.post("/reply", async (req, res) => {
     });
 
     const data = await response.json();
-    const reply = data.content[0].text;
+
+    if (!response.ok) {
+      console.error("Claude API error:", data);
+      return res.status(response.status).json(data);
+    }
+
+    const reply = data.content?.[0]?.text || "No reply generated";
 
     res.json({ reply });
 
   } catch (error) {
-    console.error(error);
-    res.status(500).send("Error processing request");
+    console.error("Server error:", error);
+    res.status(500).json({
+      error: "Server error",
+      details: error.message
+    });
   }
 });
 
 const PORT = process.env.PORT || 3000;
+
 app.listen(PORT, () => {
   console.log("Server running on port " + PORT);
 });
